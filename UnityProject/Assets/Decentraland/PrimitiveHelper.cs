@@ -1,12 +1,14 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEditor;
+using Object = UnityEngine.Object;
 
 namespace Dcl
 {
     public static class PrimitiveHelper
     {
         private static Dictionary<PrimitiveType, Mesh> primitiveMeshes = new Dictionary<PrimitiveType, Mesh>();
+
+        private static Material defaultMaterial;
 
         public static GameObject CreatePrimitive(PrimitiveType type, bool withCollider)
         {
@@ -24,47 +26,25 @@ namespace Dcl
         {
             if (!primitiveMeshes.ContainsKey(type))
             {
-                CreatePrimitiveMesh(type);
+                GameObject gameObject = GameObject.CreatePrimitive(type);
+                Mesh mesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
+                GameObject.DestroyImmediate(gameObject);
+                primitiveMeshes[type] = mesh;
             }
 
             return primitiveMeshes[type];
         }
 
-        static Mesh _coneMesh;
-        public static Mesh ConeMesh
+        public static Material GetDefaultMaterial()
         {
-            get
+            if (!defaultMaterial)
             {
-                if (!_coneMesh)
-                {
-                    var meshFolder = FileUtil.FindFolder("Decentraland/Internal");
-                    if (meshFolder.EndsWith("/")) meshFolder = meshFolder.Remove(meshFolder.LastIndexOf("/"), 1);
-                    _coneMesh = LoadAssetAtPath<Mesh>(string.Format("{0}/Cone.asset", meshFolder));
-                }
-                return _coneMesh;
+                GameObject gameObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                defaultMaterial = gameObject.GetComponent<MeshRenderer>().sharedMaterial;
+                GameObject.DestroyImmediate(gameObject);
             }
-        }
 
-        [MenuItem("Decentraland/TestCone")]
-        static void TestCreateCone()
-        {
-            Debug.Log("TC52" + _coneMesh);
-            Debug.Log("TC53" + ConeMesh.name);
-        }
-
-        private static Mesh CreatePrimitiveMesh(PrimitiveType type)
-        {
-            GameObject gameObject = GameObject.CreatePrimitive(type);
-            Mesh mesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
-            GameObject.DestroyImmediate(gameObject);
-
-            primitiveMeshes[type] = mesh;
-            return mesh;
-        }
-
-        internal static T LoadAssetAtPath<T>(string InPath) where T : UnityEngine.Object
-        {
-            return (T)AssetDatabase.LoadAssetAtPath(InPath, typeof(T));
+            return defaultMaterial;
         }
     }
 }
