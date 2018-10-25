@@ -26,8 +26,10 @@ namespace Dcl
             var go = dclObject.gameObject;
 
             EditorGUILayout.PropertyField(visible, new GUIContent("visible"));
-            //if (DclPrimitiveHelper.ShouldGameObjectExportAsAPrimitive(go))
-			if(dclObject.PrimitiveType!=DclPrimitiveType.other)
+
+			//to do : rebuild primitive mesh when mesh parameter changed
+
+			if(dclObject.dclPrimitiveType!=DclPrimitiveType.other)
             {
                 EditorGUILayout.PropertyField(withCollision, new GUIContent("withCollision", "Only available for primitives"));
             }

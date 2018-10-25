@@ -1,108 +1,87 @@
 ﻿using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+using Properties4Net;
 
 namespace Dcl
 {
+	public enum LanguageStringValue{
+		KeepTheseNumbersSmaller=0,
+		Document,
+		DCLProjectPath,
+		DCLNowProjectPath,
+		SelectDCLProjectPath,
+		OnlyStandardShaderSupported,
+		TextureSizeMustBe,
+		ParcelsCount,
+		Base,
+		Edit,
+        Save,
+		DCLExporter,
+		Statistics,
+		Refresh,
+		Triangles,
+		Entities,
+		Bodies,
+		Materials,
+		Textures,
+		Height,
+		OutofLandRange,
+		UnsupportedShader,
+		InvalidTextureSize,
+		ClickWarning,
+		OwnerInfo,
+		OwnerInfoAddress,
+		OwnerInfoName,
+		OwnerInfoEmail,
+		StandardExport,
+		Export,
+		InitProject,
+		ConfirmInitDCLProject,
+		InitDCLProjectAreYouSure,
+		YES,
+		NO,
+		SelectValidProjectFolder,
+		RunProject,
+		ConfimRunDCLProject,
+		RunDCLProjectAreYouSure,
+		DCLStartWait10Seconds,
+		ExportForNowSh,
+        CoordinatesFormatError,
+		LastType
+	}
+
     public static class LabelLocalization
     {
         public enum ELanguage
         {
             EN,
-            CN,
-        }
+            CN
+        } 
 
-        public static ELanguage Language = ELanguage.EN;
+		public static ELanguage Language = ELanguage.EN;
+		private static MessageSource s_messageSource = null;
+		private static string[] languageString = null;
+		public static void loadLanguageStringFromFile(){
+			s_messageSource = new MessageSource("Assets/Decentraland/Editor/Localization","language"); 
 
-        public static string KeepTheseNumbersSmaller
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "以下指标不能超出右边的数字限制";
-                    default:
-                        return "Keep these numbers smaller than the right";
-                }
-            }
-        }
-        public static string Document
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "文档：{0}";
-                    default:
-                        return "Document: {0}";
-                }
-            }
-        }
-        public static string DCLProjectPath
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "DCL工程文件夹";
-                    default:
-                        return "DCL Project Path";
-                }
-            }
-        }
-        public static string DCLNowProjectPath
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "DCL-Now工程文件夹";
-                    default:
-                        return "DCL-Now Project Path";
-                }
-            }
-        }
-        public static string SelectDCLProjectPath
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "选择DCL工程文件夹";
-                    default:
-                        return "Select the DCL Project folder";
-                }
-            }
-        }
+			int length = (int)LanguageStringValue.LastType;
+			languageString = new string[length];
+			for (int i = 0; i < length; ++i) {
+				LanguageStringValue l = (LanguageStringValue)i;
+				languageString [i] = s_messageSource.GetMessage(l.ToString(), null, Language.ToString());
+			}
+		}
+
+		public static string getString(LanguageStringValue lsv){
+			if(languageString==null) 
+			{
+				loadLanguageStringFromFile ();
+			}
+
+			return languageString [(int)lsv];
+		}
         
-        public static string OnlyStandardShaderSupported
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "只支持Standard材质";
-                    default:
-                        return "Only Standard Shader is supported";
-                }
-            }
-        }
-        public static string TextureSizeMustBe
-        {
-            get
-            {
-                switch (Language)
-                {
-                    case ELanguage.CN:
-                        return "贴图的边长必须是1,2,4,8,..., 512";
-                    default:
-                        return "Texture sizes must be one of 1,2,4,8,..., 512";
-                }
-            }
-        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEditor;
 
 namespace Dcl
 {
@@ -12,10 +13,15 @@ namespace Dcl
 
         [Tooltip("Only available for primitives")]
         public bool withCollision = false;
+		[SerializeField]
 		private DclPrimitiveType m_primitiveType = DclPrimitiveType.other;
-		public DclPrimitiveType PrimitiveType { 
+		public DclPrimitiveType dclPrimitiveType { 
 			get{return m_primitiveType;} 
 			set{m_primitiveType = value;}
+		} 
+
+		public void Start(){
+
 		}
 
         protected void Update()

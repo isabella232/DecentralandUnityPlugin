@@ -36,6 +36,49 @@ namespace Dcl
 
         public  static readonly  Dictionary<GameObject, EDclNodeType> GameObjectToNodeTypeDict = new Dictionary<GameObject, EDclNodeType>();
 
+		public static string CalcName(Object _object){
+			string name = "";
+			PrefabType t = PrefabUtility.GetPrefabType (_object);
+			switch (t) {
+			case PrefabType.PrefabInstance:
+			case PrefabType.ModelPrefabInstance:
+				{
+					PropertyModification[] pm = PrefabUtility.GetPropertyModifications (_object);
+
+					bool change = false;
+					foreach (var v in pm) {
+						if( !(v.propertyPath=="m_LocalPosition.x" ||
+							v.propertyPath=="m_LocalPosition.y" ||
+							v.propertyPath=="m_LocalPosition.z" ||
+							v.propertyPath=="m_LocalRotation.x" ||
+							v.propertyPath=="m_LocalRotation.y" ||
+							v.propertyPath=="m_LocalRotation.z" ||
+							v.propertyPath=="m_LocalRotation.w" ||
+							v.propertyPath=="m_RootOrder" ||
+							v.propertyPath=="m_Name") ){
+
+							change = true;
+							break;
+							//Debug.Log (v.propertyPath);
+						}
+					}
+
+					if (change == true) {
+						name = _object.name + Mathf.Abs(_object.GetInstanceID ());
+					} else {
+						Object o = PrefabUtility.GetCorrespondingObjectFromSource (_object);
+						name = o.name + Mathf.Abs(o.GetInstanceID ());
+					}
+				}
+				break;
+			default:
+				name = _object.name + Mathf.Abs(_object.GetInstanceID ());
+				break;
+			}
+
+			return name;
+		}
+
         public static void TraverseAllScene(StringBuilder xmlBuilder, List<GameObject> meshesToExport, SceneStatistics statistics, SceneWarningRecorder warningRecorder)
         {
             var rootGameObjects = new List<GameObject>();
@@ -132,42 +175,44 @@ namespace Dcl
                 {
                     extraProperties.AppendFormat(" scale={{{0}}}", Vector3ToJSONString(tra.localScale));
                 }
-                foreach (var propertyPair in customNode.propertyPairs)
-                {
-                    extraProperties.AppendFormat(" {0}={1}", propertyPair.name, propertyPair.value);
-                }
+
+				if(customNode.propertyPairs!=null){
+					foreach (var propertyPair in customNode.propertyPairs)
+					{
+						extraProperties.AppendFormat(" {0}={1}", propertyPair.name, propertyPair.value);
+					}
+				}
             }
             else
             {
 
-                if (tra.GetComponent<MeshFilter>() && tra.GetComponent<MeshRenderer>()) //Primitives & glTF
+				if (tra.GetComponent<MeshFilter>() && tra.GetComponent<MeshRenderer>()) //Primitives & glTF
                 {
+					if (dclObject) {
+						switch (dclObject.dclPrimitiveType) {
+						case DclPrimitiveType.box:
+							nodeName = "box";
+							nodeType = EDclNodeType.box;
+							break;
+						case DclPrimitiveType.sphere:
+							nodeName = "sphere";
+							nodeType = EDclNodeType.sphere;
+							break;
+						case DclPrimitiveType.plane:
+							nodeName = "plane";
+							nodeType = EDclNodeType.plane;
+							break;
+						case DclPrimitiveType.cylinder:
+							nodeName = "cylinder";
+							nodeType = EDclNodeType.cylinder;
+							break;
+						case DclPrimitiveType.cone:
+							nodeName = "cone";
+							nodeType = EDclNodeType.cone;
+							break;
+						}
+					}
                     var meshFilter = tra.GetComponent<MeshFilter>();
-                    if (meshFilter.sharedMesh == DclPrimitiveHelper.GetDclPrimitiveMesh(DclPrimitiveType.box))
-                    {
-                        nodeName = "box";
-                        nodeType = EDclNodeType.box;
-                    }
-                    else if (meshFilter.sharedMesh == DclPrimitiveHelper.GetDclPrimitiveMesh(DclPrimitiveType.sphere))
-                    {
-                        nodeName = "sphere";
-                        nodeType = EDclNodeType.sphere;
-                    }
-                    else if (meshFilter.sharedMesh == DclPrimitiveHelper.GetDclPrimitiveMesh(DclPrimitiveType.plane))
-                    {
-                        nodeName = "plane";
-                        nodeType = EDclNodeType.plane;
-                    }
-                    else if (meshFilter.sharedMesh == DclPrimitiveHelper.GetDclPrimitiveMesh(DclPrimitiveType.cylinder))
-                    {
-                        nodeName = "cylinder";
-                        nodeType = EDclNodeType.cylinder;
-                    }
-                    else if (meshFilter.sharedMesh == DclPrimitiveHelper.GetDclPrimitiveMesh(DclPrimitiveType.cone))
-                    {
-                        nodeName = "cone";
-                        nodeType = EDclNodeType.cone;
-                    }
 
                     if (nodeName != null)
                     {
@@ -187,7 +232,7 @@ namespace Dcl
                             else
                             {
                                 //need to export this material
-                                if (!primitiveMaterialsToExport.Exists(m => m == material))
+								if (primitiveMaterialsToExport!=null && !primitiveMaterialsToExport.Exists(m => m == material))
                                 {
                                     primitiveMaterialsToExport.Add(material);
                                 }
@@ -200,7 +245,7 @@ namespace Dcl
                         //withCollisions
                         if (dclObject)
                         {
-                            if (DclPrimitiveHelper.ShouldGameObjectExportAsAPrimitive(tra.gameObject))
+							if(dclObject.dclPrimitiveType!=DclPrimitiveType.other)
                             {
                                 if (dclObject.withCollision == true) extraProperties.Append(" withCollisions={true}");
                             }
@@ -209,7 +254,25 @@ namespace Dcl
                         //Statistics
                         if (statistics != null)
                         {
-                            statistics.triangleCount += meshFilter.sharedMesh.triangles.LongLength / 3;
+							switch (dclObject.dclPrimitiveType) {
+							case DclPrimitiveType.box:
+								statistics.triangleCount += 12;
+								break;
+							case DclPrimitiveType.sphere:
+								statistics.triangleCount += 4624;
+								break;
+							case DclPrimitiveType.plane:
+								statistics.triangleCount += 4;
+								break;
+							case DclPrimitiveType.cylinder:
+								statistics.triangleCount += 144;
+								break;
+							case DclPrimitiveType.cone:
+								statistics.triangleCount += 108;
+								break;
+							}
+
+							statistics.bodyCount += 1;
                         }
                     }
                     else
@@ -228,7 +291,11 @@ namespace Dcl
                         // position = Vector3.zero;
                         // eulerAngles = Vector3.zero;
                         // scale = Vector3.zero;
-                        extraProperties.AppendFormat(" src=\"./unity_assets/{0}.gltf\"", tra.name);
+
+						//if tra is a prefab and do not get any change. use the prefab's name
+
+                        //extraProperties.AppendFormat(" src=\"./unity_assets/{0}.gltf\"", tra.name);
+						extraProperties.AppendFormat(" src=\"./unity_assets/{0}.gltf\"", CalcName(tra.gameObject));
 
                         //Statistics
                         if (statistics != null)
@@ -236,6 +303,36 @@ namespace Dcl
                             statistics.triangleCount += meshFilter.sharedMesh.triangles.LongLength / 3;
                             statistics.bodyCount += 1;
                         }
+
+						if (statistics != null) {
+							Mesh m = meshFilter.sharedMesh;
+
+							Renderer mr = tra.GetComponent<MeshRenderer> ();
+							if (mr == null) {
+								mr = tra.GetComponent<SkinnedMeshRenderer> ();
+							}
+
+							var sm = mr.sharedMaterials;
+							for (int i = 0; i < sm.Length; ++i) 
+							{
+								Material ma = sm [i];
+								if (ma != null) 
+								{
+									statistics.materialCount += 1;
+									Shader shader = ma.shader;
+									for(int j=0; j<ShaderUtil.GetPropertyCount(shader); j++)
+									{
+										if (ShaderUtil.GetPropertyType (shader, j) == ShaderUtil.ShaderPropertyType.TexEnv) 
+										{
+											Texture texture = ma.GetTexture (ShaderUtil.GetPropertyName (shader, j));
+											if (texture != null) {statistics.textureCount += 1;}
+										}
+									}
+								}
+							}
+
+						}
+
                     }
                 }
                 else if (tra.GetComponent<TextMesh>() && tra.GetComponent<MeshRenderer>()) //TextMesh
@@ -245,17 +342,55 @@ namespace Dcl
                     nodeType = EDclNodeType.text;
                     var tm = tra.GetComponent<TextMesh>();
                     extraProperties.AppendFormat(" value=\"{0}\"", tm.text);
-                    scale *= tm.fontSize * 0.5f;
+                    //scale *= tm.fontSize * 0.5f;
                     //extraProperties.AppendFormat(" fontS=\"{0}\"", 100);
                     pColor = ToHexString(tm.color);
                     var rdrr = tra.GetComponent<MeshRenderer>();
                     if (rdrr)
                     {
-                        var width = rdrr.bounds.extents.x;
-                        var height = rdrr.bounds.extents.y * 1;
+						
+						var width = rdrr.bounds.size.x*2 / tra.lossyScale.x;//rdrr.bounds.extents.x*2;
+						var height = rdrr.bounds.size.y*2 / tra.lossyScale.y;//rdrr.bounds.extents.y * 2;
+
                         extraProperties.AppendFormat(" width={{{0}}}", width);
                         extraProperties.AppendFormat(" height={{{0}}}", height);
                     }
+					extraProperties.AppendFormat(" fontSize={{{0}}}", tm.fontSize==0 ? 13f*38f : tm.fontSize*38f);
+
+					switch (tm.anchor) {
+					case TextAnchor.UpperLeft:
+						extraProperties.AppendFormat(" hAlign=\"right\"");
+						extraProperties.AppendFormat(" vAlign=\"bottom\"");
+						break;
+					case TextAnchor.UpperCenter:
+						extraProperties.AppendFormat(" vAlign=\"bottom\"");
+						break;
+					case TextAnchor.UpperRight:
+						extraProperties.AppendFormat(" hAlign=\"left\"");
+						extraProperties.AppendFormat(" vAlign=\"bottom\"");
+						break;
+					case TextAnchor.MiddleLeft:
+						extraProperties.AppendFormat(" hAlign=\"right\"");
+						break;
+					case TextAnchor.MiddleCenter:
+						
+						break;
+					case TextAnchor.MiddleRight:
+						extraProperties.AppendFormat(" hAlign=\"left\"");
+						break;
+					case TextAnchor.LowerLeft:
+						extraProperties.AppendFormat(" hAlign=\"right\"");
+						extraProperties.AppendFormat(" vAlign=\"top\"");
+						break;
+					case TextAnchor.LowerCenter:
+						extraProperties.AppendFormat(" vAlign=\"top\"");
+						break;
+					case TextAnchor.LowerRight:
+						extraProperties.AppendFormat(" hAlign=\"left\"");
+						extraProperties.AppendFormat(" vAlign=\"top\"");
+						break;
+					}
+
                 }
 
                 if (tra.GetComponent<MeshRenderer>())
@@ -440,10 +575,10 @@ namespace Dcl
                 warningRecorder.UnsupportedShaderWarnings.Add(new SceneWarningRecorder.UnsupportedShader(material));
             }
 
-            var albedoTex = material.GetTexture("_MainTex");
-            var refractionTexture = material.GetTexture("_MetallicGlossMap");
-            var bumpTexture = material.GetTexture("_BumpMap");
-            var emisiveTexture = material.GetTexture("_EmissionMap");
+			var albedoTex = material.HasProperty("_MainTex") ? material.GetTexture("_MainTex") : null;
+			var refractionTexture = material.HasProperty("_MetallicGlossMap") ? material.GetTexture("_MetallicGlossMap") : null;
+			var bumpTexture = material.HasProperty("_BumpMap") ? material.GetTexture("_BumpMap") : null;
+			var emisiveTexture = material.HasProperty("_EmissionMap") ? material.GetTexture("_EmissionMap") : null;
 
             if (albedoTex)
             {
@@ -467,13 +602,21 @@ namespace Dcl
                 xml.Append("<material");
                 xml.AppendFormat(" id=\"{0}\"", material.name);
                 xml.AppendFormat(" albedoColor=\"{0}\"", ToHexString(material.color));
+				xml.AppendFormat(" alpha={{{0}}}", material.color.a);
                 if (albedoTex)
                 {
                     xml.AppendFormat(" albedoTexture=\"{0}\"", GetTextureRelativePath(albedoTex));
+					bool b = !(material.IsKeywordEnabled ("_ALPHATEST_ON")==false && material.IsKeywordEnabled ("_ALPHABLEND_ON")==false && material.IsKeywordEnabled ("_ALPHAPREMULTIPLY_ON")==false);
+
+					if (b) {
+						xml.Append (" hasAlpha={true}");
+					}else{
+						xml.Append (" hasAlpha={false}");
+					}
                 }
                 if (refractionTexture)
                 {
-                    xml.AppendFormat(" refractionTexture=\"{0}\"", GetTextureRelativePath(refractionTexture));
+					xml.AppendFormat(" refractionTexture=\"{0}\"", GetTextureRelativePath(refractionTexture));
                 }
                 if (bumpTexture)
                 {
